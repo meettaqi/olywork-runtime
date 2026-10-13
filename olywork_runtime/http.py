@@ -7,6 +7,7 @@ from collections.abc import Callable, Iterable
 from typing import Any
 
 from .auth import AuthenticationError, authenticate
+from .mcp import handle
 from .tools import ToolNotFound, ToolRegistry
 
 MAX_BODY_BYTES = 1_048_576
@@ -34,12 +35,17 @@ def application(registry: ToolRegistry, verifier: Callable[[str], bool]) -> Call
 
         if method == "GET" and path == "/tools":
             return _json("200 OK", {"tools": list(registry.names())}, start_response)
-        if method == "POST" and path == "/call":
+        if method == "POST" and path in {"/call", "/mcp"}:
             try:
                 length = int(environ.get("CONTENT_LENGTH") or 0)
                 if length < 0 or length > MAX_BODY_BYTES:
                     return _json("413 Payload Too Large", {"error": "request body too large"}, start_response)
                 payload = json.loads(environ["wsgi.input"].read(length) or b"{}")
+                if path == "/mcp":
+                    response = handle(payload, registry)
+                    if response is None:
+                        return _json("202 Accepted", {}, start_response)
+                    return _json("200 OK", response, start_response)
                 result = registry.invoke(payload["name"], payload.get("arguments", {}))
             except ToolNotFound:
                 return _json("404 Not Found", {"error": "tool not found"}, start_response)

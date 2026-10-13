@@ -1,4 +1,5 @@
 import io
+import json
 
 import pytest
 
@@ -70,3 +71,18 @@ def test_mcp_reports_invalid_arguments():
         registry(),
     )
     assert response["error"] == {"code": -32602, "message": "invalid params"}
+
+
+def test_http_mcp_endpoint_dispatches_json_rpc():
+    statuses = []
+    payload = json.dumps({"jsonrpc": "2.0", "id": 6, "method": "tools/list"}).encode()
+    environ = {
+        "REQUEST_METHOD": "POST",
+        "PATH_INFO": "/mcp",
+        "CONTENT_LENGTH": str(len(payload)),
+        "HTTP_AUTHORIZATION": "Bearer secret",
+        "wsgi.input": io.BytesIO(payload),
+    }
+    body = application(registry(), static_verifier("secret"))(environ, lambda status, headers: statuses.append(status))
+    assert statuses == ["200 OK"]
+    assert json.loads(body[0])["result"]["tools"][0]["name"] == "echo"
