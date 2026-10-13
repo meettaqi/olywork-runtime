@@ -48,4 +48,31 @@ class ToolRegistry:
         tool = self._tools.get(name)
         if tool is None:
             raise ToolNotFound(name)
+        self._validate_arguments(tool.input_schema, arguments)
         return tool.handler(arguments)
+
+    @staticmethod
+    def _validate_arguments(schema: Mapping[str, object], arguments: Mapping[str, object]) -> None:
+        if schema.get("type", "object") != "object":
+            return
+        required = schema.get("required", [])
+        if not isinstance(required, list) or any(key not in arguments for key in required):
+            raise ToolDefinitionError("required tool argument is missing")
+        properties = schema.get("properties", {})
+        if not isinstance(properties, Mapping):
+            return
+        for key, rule in properties.items():
+            if key not in arguments or not isinstance(rule, Mapping):
+                continue
+            expected = rule.get("type")
+            value = arguments[key]
+            valid = {
+                "string": isinstance(value, str),
+                "number": isinstance(value, (int, float)) and not isinstance(value, bool),
+                "integer": isinstance(value, int) and not isinstance(value, bool),
+                "boolean": isinstance(value, bool),
+                "object": isinstance(value, Mapping),
+                "array": isinstance(value, list),
+            }.get(expected, True)
+            if not valid:
+                raise ToolDefinitionError(f"argument {key!r} has the wrong type")

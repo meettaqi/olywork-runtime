@@ -2,12 +2,12 @@ import io
 
 import pytest
 
-from olywork_runtime import Tool, ToolRegistry, UnsafeTarget, application, handle, static_verifier, validate_target
+from olywork_runtime import Tool, ToolDefinitionError, ToolRegistry, UnsafeTarget, application, handle, static_verifier, validate_target
 
 
 def registry():
     r = ToolRegistry()
-    r.register(Tool("echo", "Return the supplied value", lambda args: args["value"]))
+    r.register(Tool("echo", "Return the supplied value", lambda args: args["value"], {"type": "object", "required": ["value"], "properties": {"value": {"type": "string"}}}))
     return r
 
 
@@ -19,7 +19,7 @@ def test_mcp_initialize_and_list():
     assert listed["result"]["tools"] == [{
         "name": "echo",
         "description": "Return the supplied value",
-        "inputSchema": {"type": "object"},
+        "inputSchema": {"type": "object", "required": ["value"], "properties": {"value": {"type": "string"}}},
     }]
 
 
@@ -57,3 +57,8 @@ def test_http_rejects_oversized_call():
     body = application(registry(), static_verifier("secret"))(environ, lambda status, headers: statuses.append(status))
     assert statuses == ["413 Payload Too Large"]
     assert b"request body too large" in body[0]
+
+
+def test_tool_arguments_follow_declared_schema():
+    with pytest.raises(ToolDefinitionError):
+        registry().invoke("echo", {"value": 3})
