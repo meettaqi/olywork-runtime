@@ -16,7 +16,11 @@ def test_mcp_initialize_and_list():
     init = handle({"jsonrpc": "2.0", "id": 1, "method": "initialize"}, r)
     assert init["result"]["serverInfo"]["name"] == "olywork-runtime"
     listed = handle({"jsonrpc": "2.0", "id": 2, "method": "tools/list"}, r)
-    assert listed["result"]["tools"] == [{"name": "echo"}]
+    assert listed["result"]["tools"] == [{
+        "name": "echo",
+        "description": "Return the supplied value",
+        "inputSchema": {"type": "object"},
+    }]
 
 
 def test_mcp_call_and_unknown_tool():

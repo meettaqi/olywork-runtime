@@ -32,7 +32,12 @@ def handle(message: Mapping[str, Any], registry: ToolRegistry) -> dict[str, Any]
     elif method == "notifications/initialized":
         return None
     elif method == "tools/list":
-        result = {"tools": [{"name": name} for name in registry.names()]}
+        result = {
+            "tools": [
+                {"name": tool.name, "description": tool.description, "inputSchema": dict(tool.input_schema)}
+                for tool in registry.tools()
+            ]
+        }
     elif method == "tools/call":
         name = params.get("name")
         arguments = params.get("arguments", {})

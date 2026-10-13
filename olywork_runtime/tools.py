@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import re
 
 _NAME = re.compile(r"^[a-z][a-z0-9._-]{1,127}$")
@@ -22,6 +22,7 @@ class Tool:
     name: str
     description: str
     handler: Callable[[Mapping[str, object]], object]
+    input_schema: Mapping[str, object] = field(default_factory=lambda: {"type": "object"})
 
 
 class ToolRegistry:
@@ -39,6 +40,9 @@ class ToolRegistry:
 
     def names(self) -> tuple[str, ...]:
         return tuple(sorted(self._tools))
+
+    def tools(self) -> tuple[Tool, ...]:
+        return tuple(self._tools[name] for name in self.names())
 
     def invoke(self, name: str, arguments: Mapping[str, object]) -> object:
         tool = self._tools.get(name)
