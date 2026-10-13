@@ -27,7 +27,8 @@ def application(registry: ToolRegistry, verifier: Callable[[str], bool]) -> Call
         if method == "GET" and path == "/health":
             return _json("200 OK", {"ok": True}, start_response)
         try:
-            authenticate(environ, verifier)
+            auth_headers = {"Authorization": environ.get("HTTP_AUTHORIZATION", "")}
+            authenticate(auth_headers, verifier)
         except AuthenticationError as error:
             return _json("401 Unauthorized", {"error": str(error)}, start_response)
 

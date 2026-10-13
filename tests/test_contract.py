@@ -1,4 +1,8 @@
-from olywork_runtime import Tool, ToolRegistry, handle, static_verifier
+import io
+
+import pytest
+
+from olywork_runtime import Tool, ToolRegistry, UnsafeTarget, application, handle, static_verifier, validate_target
 
 
 def registry():
@@ -30,3 +34,22 @@ def test_constant_time_verifier_boundary():
     verify = static_verifier("secret")
     assert verify("secret")
     assert not verify("wrong")
+
+
+def test_ssrf_rejects_local_targets():
+    with pytest.raises(UnsafeTarget):
+        validate_target("http://127.0.0.1/internal")
+
+
+def test_http_rejects_oversized_call():
+    statuses = []
+    environ = {
+        "REQUEST_METHOD": "POST",
+        "PATH_INFO": "/call",
+        "CONTENT_LENGTH": str(1_048_577),
+        "HTTP_AUTHORIZATION": "Bearer secret",
+        "wsgi.input": io.BytesIO(b"x"),
+    }
+    body = application(registry(), static_verifier("secret"))(environ, lambda status, headers: statuses.append(status))
+    assert statuses == ["413 Payload Too Large"]
+    assert b"request body too large" in body[0]
