@@ -9,6 +9,8 @@ from typing import Any
 from .auth import AuthenticationError, authenticate
 from .tools import ToolNotFound, ToolRegistry
 
+MAX_BODY_BYTES = 1_048_576
+
 
 def _json(status: str, payload: dict[str, Any], start_response: Callable[..., object]) -> list[bytes]:
     body = json.dumps(payload, separators=(",", ":")).encode()
@@ -34,6 +36,8 @@ def application(registry: ToolRegistry, verifier: Callable[[str], bool]) -> Call
         if method == "POST" and path == "/call":
             try:
                 length = int(environ.get("CONTENT_LENGTH") or 0)
+                if length < 0 or length > MAX_BODY_BYTES:
+                    return _json("413 Payload Too Large", {"error": "request body too large"}, start_response)
                 payload = json.loads(environ["wsgi.input"].read(length) or b"{}")
                 result = registry.invoke(payload["name"], payload.get("arguments", {}))
             except ToolNotFound:
