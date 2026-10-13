@@ -1,0 +1,15 @@
+[project]
+name = "olywork-runtime"
+version = "0.1.0"
+description = "Independent HTTP and MCP runtime primitives for Olywork-compatible tools"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+readme = "README.md"
+dependencies = []
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
