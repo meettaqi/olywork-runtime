@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from .tools import ToolNotFound, ToolRegistry
+from .tools import ToolDefinitionError, ToolNotFound, ToolRegistry
 
 
 def _error(request_id: object, code: int, message: str) -> dict[str, Any]:
@@ -45,6 +45,8 @@ def handle(message: Mapping[str, Any], registry: ToolRegistry) -> dict[str, Any]
             return _error(request_id, -32602, "invalid params")
         try:
             result = {"content": [{"type": "text", "text": str(registry.invoke(name, arguments))}]}
+        except ToolDefinitionError:
+            return _error(request_id, -32602, "invalid params")
         except ToolNotFound:
             return _error(request_id, -32602, "unknown tool")
     else:

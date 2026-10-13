@@ -62,3 +62,11 @@ def test_http_rejects_oversized_call():
 def test_tool_arguments_follow_declared_schema():
     with pytest.raises(ToolDefinitionError):
         registry().invoke("echo", {"value": 3})
+
+
+def test_mcp_reports_invalid_arguments():
+    response = handle(
+        {"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {"name": "echo", "arguments": {"value": 3}}},
+        registry(),
+    )
+    assert response["error"] == {"code": -32602, "message": "invalid params"}
